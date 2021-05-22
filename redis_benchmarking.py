@@ -176,6 +176,18 @@ def time_str_miss(r_conn, n):
     print("Total Time for {} GET operations (for items NOT in Redis) (in seconds) {}".format(length, sum))
     print("Average time for 1 GET Operation (for an item NOT in Redis) (in seconds) {}".format(average))
 
+def time_half_miss(r_conn, n):
+    sum = 0
+    for x in range(n//2,3*n//2):
+        start_set = time.process_time()
+        get_string_value(r_conn, x)
+        end_set = time.process_time()
+        sum += (end_set - start_set)
+    length = len(range(n//2,3*n//2))
+    average = sum/length
+    print("Total Time for {} GET operations (half miss rate) (in seconds) {}".format(length, sum))
+    print("Average time for 1 GET Operation (half miss rate) (in seconds) {}".format(average))
+
 def test_set_get_str():
     r = create_server()
     set_string(r, 'ayush', 'vikram')
@@ -195,6 +207,7 @@ def test_time():
     time_set_str(r, n)
     time_get_str(r, n)
     time_str_miss(r, n)
+    time_half_miss(r, n)
 
 
 
