@@ -4,7 +4,7 @@ import json
 import requests
 import numpy as np
 from datetime import timedelta
-
+import config
 '''setup_connection:
 sets up the redis server and initiates the connection
 '''
@@ -263,12 +263,51 @@ def test_time(n, ratio):
 
 
 
-test_time(100000, 2/3)
+#test_time(70000, 1/4)
 
 
 
+def naive_loop_API_get(n, path, params):
+    sum = 0
+    for x in range(n):
+        start = time.process_time()
+        response = requests.get(url = path, params= params)
+        if response.status_code >= 400:
+            raise Exception("API Error")
+        response_json = response.json()
+        end = time.process_time()
+        sum += (end-start)
+    return sum/n
+
+def Redis_API_loop(n, path, params):
+    sum = 0
+    r = create_server()
+    for x in range(n):
+        start = time.process_time()
+        if (r.exists(path) == True):
+            r.get(path)
+        else:
+            response = requests.get(url = path, params= params)
+            if response.status_code >= 400:
+                raise Exception("API Error")
+            response_json = response.json()
+            r.set(path, json.dumps(response_json))
+        end = time.process_time()
+        sum += (end - start)
+    return sum/n
 
 
+def API_time_test(n, path, params):
+    print("Naive API calls average time: {}".format(naive_loop_API_get(n, path, params)))
+    print("Redis API Loop average time: {}".format(Redis_API_loop(n, path, params)))
+
+path = 'https://maps.googleapis.com/maps/api/directions/json'
+params = dict(
+    origin = 'New York, NY',
+    key = config.API_key,
+    destination = 'Chicago, IL'
+)
+API_time_test(100, path, params)
 # def naive_factorial(n):
 #     if n <= 1:
 #         return 1
