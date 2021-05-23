@@ -265,7 +265,11 @@ def test_time(n, ratio):
 
 #test_time(70000, 1/4)
 
-
+'''
+naive_loop:
+makes n number of API get request calls to url at path with parameters in params
+returns the average time for one such call
+'''
 
 def naive_loop_API_get(n, path, params):
     sum = 0
@@ -279,13 +283,19 @@ def naive_loop_API_get(n, path, params):
         sum += (end-start)
     return sum/n
 
+'''
+Redis_API_loop():
+makes n API GET Request calls to url at path with parameters in params
+returns average time for one such call
+'''
+
 def Redis_API_loop(n, path, params):
     sum = 0
     r = create_server()
     for x in range(n):
         start = time.process_time()
         if (r.exists(path) == True):
-            r.get(path)
+            json.loads(r.get(path))
         else:
             response = requests.get(url = path, params= params)
             if response.status_code >= 400:
@@ -297,16 +307,16 @@ def Redis_API_loop(n, path, params):
     return sum/n
 
 
+'''
+API_time_test():
+wrapper function for testing loop of n API calls with and without Redis cache
+'''
 def API_time_test(n, path, params):
     print("Naive API calls average time: {}".format(naive_loop_API_get(n, path, params)))
     print("Redis API Loop average time: {}".format(Redis_API_loop(n, path, params)))
 
-path = 'https://maps.googleapis.com/maps/api/directions/json'
-params = dict(
-    origin = 'New York, NY',
-    key = config.API_key,
-    destination = 'Chicago, IL'
-)
+path = 'https://api.coindesk.com/v1/bpi/currentprice.json'
+params = dict()
 API_time_test(100, path, params)
 # def naive_factorial(n):
 #     if n <= 1:
