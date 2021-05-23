@@ -1,7 +1,8 @@
 import redis
 import time
-import numpy as np
 import json
+import requests
+import numpy as np
 from datetime import timedelta
 
 '''setup_connection:
@@ -140,7 +141,10 @@ def get_string_value(r_conn, key_):
     finally:
         return return_val
 
-
+'''
+time_set_str():
+measure the total time and average time taken to SET n number of key,value numerical (integer) pairs into the Redis cache
+'''
 def time_set_str(r_conn, n):
     sum = 0
     for x in range(0,n):
@@ -149,9 +153,13 @@ def time_set_str(r_conn, n):
         end_set = time.process_time()
         sum += (end_set - start_set)
     average = sum/n
-    print("Total Time for {} SET operations (in seconds) {}".format(n, sum))
+    print("\nTotal Time for {} SET operations (in seconds) {}".format(n, sum))
     print("Average time for 1 SET Operation (in seconds) {}".format(average))
-
+    return average
+'''
+time_get_str():
+measure the total time and average time taken to GET n number of key,value pairs that all exists within the Redis cache
+'''
 def time_get_str(r_conn, n):
     sum = 0
     for x in range(0,n):
@@ -160,10 +168,13 @@ def time_get_str(r_conn, n):
         end_set = time.process_time()
         sum += (end_set - start_set)
     average = sum/n
-    print("Total Time for {} GET operations (for items in Redis) (in seconds) {}".format(n, sum))
+    print("\nTotal Time for {} GET operations (for items in Redis) (in seconds) {}".format(n, sum))
     print("Average time for 1 GET Operation (for an item in Redis) (in seconds) {}".format(average))
-
-
+    return average
+'''
+time_str_miss():
+meaure the total and average time taken to GET n number of key,value pairs that all do not exists in Redis
+'''
 def time_str_miss(r_conn, n):
     sum = 0
     for x in range(n+1,2*n):
@@ -173,9 +184,13 @@ def time_str_miss(r_conn, n):
         sum += (end_set - start_set)
     length = len(range(n+1, 2*n))
     average = sum/length
-    print("Total Time for {} GET operations (for items NOT in Redis) (in seconds) {}".format(length, sum))
+    print("\nTotal Time for {} GET operations (for items NOT in Redis) (in seconds) {}".format(length, sum))
     print("Average time for 1 GET Operation (for an item NOT in Redis) (in seconds) {}".format(average))
-
+    return average
+'''
+time_half_miss():
+measure the total and average time taken to GET n number of key,value pairs such that 1/2 of them are hits and other half misses
+'''
 def time_half_miss(r_conn, n):
     sum = 0
     for x in range(n//2,3*n//2):
@@ -185,14 +200,44 @@ def time_half_miss(r_conn, n):
         sum += (end_set - start_set)
     length = len(range(n//2,3*n//2))
     average = sum/length
-    print("Total Time for {} GET operations (half miss rate) (in seconds) {}".format(length, sum))
+    print("\nTotal Time for {} GET operations (half miss rate) (in seconds) {}".format(length, sum))
     print("Average time for 1 GET Operation (half miss rate) (in seconds) {}".format(average))
+    return average
 
+'''
+time_ratio_miss():
+calculate the average and total time for n GET operations where ratio is the probability of a hit. for example if ratio is 1/3, then the probability of a hit is 1/3 and that of a miss is 2/3.
+'''
+def time_ratio_miss(r_conn, ratio, n):
+    #ratio is the ratio of the probability of hits to misses, for ex. ratio of 1/3 means 1/3 probability of a hit
+    sum = 0
+    end_val = (1/ratio)*n
+    for x in range(n):
+        num = np.random.randint(0, end_val)
+        start_time = time.process_time()
+        get_string_value(r_conn, num)
+        end_time = time.process_time()
+        sum += (end_time - start_time)
+    average = sum/n
+    print("\nTotal Time for {} GET operations with probability {} of being a hit is (in seconds) {}".format(n, ratio, sum))
+    print("Average time for 1 GET Operation with probability {} of being a hit is (in seconds) {}".format(ratio, average))
+    return average
+
+
+'''test_set_get_str
+test that the custom get string value is working and returns the value for a given key
+'''
 def test_set_get_str():
     r = create_server()
     set_string(r, 'ayush', 'vikram')
     assert get_string_value(r, 'ayush') == 'vikram'
 
+
+'''
+test_expiry_string():
+testing of the set_string_expiry function, which sets a key,value pair with a timedelta object as the expiry
+after the expiry time runs out (10 seconds) the key,value pair should not exist anymore on Redis
+'''
 def test_expiry_string():
     r = create_server()
     set_string_expiry(r, 'pencil', timedelta(seconds = 10), 'pen')
@@ -201,15 +246,76 @@ def test_expiry_string():
     assert get_string_value(r, 'pencil') is None
 
 
-def test_time():
+
+'''
+test_time
+wrapper function to call the functions that measure the time taken for various scearios of reddis string key, value pairs
+'''
+def test_time(n, ratio):
     r = create_server()
-    n = 10000
     time_set_str(r, n)
     time_get_str(r, n)
     time_str_miss(r, n)
     time_half_miss(r, n)
+    time_ratio_miss(r, ratio, n)
 
 
 
 
-test_time()
+
+test_time(100000, 2/3)
+
+
+
+
+
+# def naive_factorial(n):
+#     if n <= 1:
+#         return 1
+#     return n * naive_factorial(n-1)
+
+# def memo_factorial(hash, n):
+#     if n <= 1:
+#         return 1
+#     if n in hash:
+#         return hash[n]
+#     else:
+#         val = n * memo_factorial(hash, n-1)
+#         hash[n] = val
+#         return val
+
+# redis_factorial_client = create_server()
+# redis_factorial_client.hmset('factorial', {0:1})
+# def redis_factorial(n):
+#     if n<=1:
+#         return 1
+#     fac_map = redis_factorial_client.hgetall('factorial')
+#     if n in fac_map:
+#         return int(fac_map[n])
+#     else:
+#         val = n * redis_factorial(n-1)
+#         fac_map[n] = val
+#         redis_factorial_client.hset('factorial', n, val)
+#         return val
+
+# def test_time_factorial(n):
+#     hash = dict()
+#     start_naive = time.process_time()
+#     naive_val = naive_factorial(n)
+#     end_naive = time.process_time()
+
+#     start_memo = time.process_time()
+#     memo_val = memo_factorial(hash, n)
+#     end_memo = time.process_time()
+
+#     start_redis = time.process_time()
+#     redis_fac = redis_factorial(n)
+#     end_redis = time.process_time()
+#     assert naive_val == redis_fac == memo_val
+#     print("Time taken to compute {} factorial with naive method: {}".format(n, (end_naive-start_naive)))
+#     print("Time taken to compute {} factorial with Redis: {}".format(n, (end_redis-start_redis)))
+#     print("Time taken to compute {} factorial with Memo: {}".format(n, (end_memo-start_memo)))
+
+# test_time_factorial(40)
+
+
