@@ -15,7 +15,7 @@ def setup_connection(hostname = 'localhost', port_number = 6379, db_num = 0, pas
     #pass_word: password, default set to None
     #socket_timeout_ : connection timeout
     r = redis.Redis(host = hostname, port = port_number, db = db_num, password = pass_word, socket_timeout = socket_timeout_)
-
+    r.flushall()
     return r if r.ping() == True else None
 
 
@@ -149,7 +149,7 @@ def time_set_str(r_conn, n):
     sum = 0
     for x in range(0,n):
         start_set = time.process_time()
-        set_string(r_conn, x, x)
+        r_conn.set(x, x)
         end_set = time.process_time()
         sum += (end_set - start_set)
     average = sum/n
@@ -164,7 +164,8 @@ def time_get_str(r_conn, n):
     sum = 0
     for x in range(0,n):
         start_set = time.process_time()
-        get_string_value(r_conn, x)
+        val = r_conn.get(x)
+        assert val is not None
         end_set = time.process_time()
         sum += (end_set - start_set)
     average = sum/n
@@ -179,7 +180,8 @@ def time_str_miss(r_conn, n):
     sum = 0
     for x in range(n+1,2*n):
         start_set = time.process_time()
-        get_string_value(r_conn, x)
+        val = r_conn.get(x)
+        assert val is None
         end_set = time.process_time()
         sum += (end_set - start_set)
     length = len(range(n+1, 2*n))
@@ -195,7 +197,7 @@ def time_half_miss(r_conn, n):
     sum = 0
     for x in range(n//2,3*n//2):
         start_set = time.process_time()
-        get_string_value(r_conn, x)
+        r_conn.get(x)
         end_set = time.process_time()
         sum += (end_set - start_set)
     length = len(range(n//2,3*n//2))
@@ -215,7 +217,7 @@ def time_ratio_miss(r_conn, ratio, n):
     for x in range(n):
         num = np.random.randint(0, end_val)
         start_time = time.process_time()
-        get_string_value(r_conn, num)
+        r_conn.get(num)
         end_time = time.process_time()
         sum += (end_time - start_time)
     average = sum/n
@@ -253,6 +255,7 @@ wrapper function to call the functions that measure the time taken for various s
 '''
 def test_time(n, ratio):
     r = create_server()
+    r.flushall() #clear keys
     time_set_str(r, n)
     time_get_str(r, n)
     time_str_miss(r, n)
@@ -263,7 +266,7 @@ def test_time(n, ratio):
 
 
 
-#test_time(70000, 1/4)
+#test_time(10000, 1/4)
 
 '''
 naive_loop:
@@ -292,6 +295,7 @@ returns average time for one such call
 def Redis_API_loop(n, path, params):
     sum = 0
     r = create_server()
+    r.flushall()
     for x in range(n):
         start = time.process_time()
         if (r.exists(path) == True):
@@ -315,9 +319,8 @@ def API_time_test(n, path, params):
     print("Naive API calls average time: {}".format(naive_loop_API_get(n, path, params)))
     print("Redis API Loop average time: {}".format(Redis_API_loop(n, path, params)))
 
-path = 'https://api.coindesk.com/v1/bpi/currentprice.json'
-params = dict()
-API_time_test(100, path, params)
+
+#API_time_test(1000, config.coin_desk_path, config.coin_desk_params)
 # def naive_factorial(n):
 #     if n <= 1:
 #         return 1
@@ -333,19 +336,15 @@ API_time_test(100, path, params)
 #         hash[n] = val
 #         return val
 
-# redis_factorial_client = create_server()
-# redis_factorial_client.hmset('factorial', {0:1})
-# def redis_factorial(n):
-#     if n<=1:
-#         return 1
-#     fac_map = redis_factorial_client.hgetall('factorial')
-#     if n in fac_map:
-#         return int(fac_map[n])
-#     else:
-#         val = n * redis_factorial(n-1)
-#         fac_map[n] = val
-#         redis_factorial_client.hset('factorial', n, val)
-#         return val
+def redis_factorial(redis_factorial_client, n):
+    if n<=1:
+        return 1
+    if redis_factorial_client.exists(n):
+        return int(redis_factorial_client.get(n))
+    else:
+        val = n * redis_factorial(redis_factorial_client, n-1)
+        redis_factorial_client.set(n, val)
+        return val
 
 # def test_time_factorial(n):
 #     hash = dict()
