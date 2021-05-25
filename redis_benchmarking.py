@@ -366,4 +366,17 @@ def redis_factorial(redis_factorial_client, n):
 
 # test_time_factorial(40)
 
+'''
+measures the time taken for a sorting operation on a list with n numbers (from 0 to n-1, inclusive)
+'''
+def time_list_numerical_sorting(n):
+    r = create_server()
+    r.flushall()
+    r.rpush('sort-list', *[x for x in range(n)])
+    start = time.process_time()
+    r.sort('sort-list')
+    end = time.process_time()
+    sorting_time = end-start
+    print("The time taken to sort {} numbers (from 0 to {} inclusive) is: {}".format(n, n-1, sorting_time))
+    return sorting_time
 
