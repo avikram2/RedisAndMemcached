@@ -124,6 +124,24 @@ def time_ratio_miss(mem, ratio, n):
     return average
 
 
+'''time_mem_incr():
+measure the time taken by the increment operation
+'''
+def time_mem_incr(mem, n, amt = 1):
+    sum = 0
+    for x in range(n):
+        start = time.process_time()
+        val = mem.incr(str(x), amt)
+        assert val is not None
+        end = time.process_time()
+        sum += (end-start)
+    average = sum/n
+    print("\nmemcached: Total time for {} incr operations by {} amount is: {}".format(n, amt, sum))
+    print("memcached: Average time for 1 incr operation by {} amount is: {}".format(amt, average))
+    return average
+
+
+
 def time_test(n, ratio):
     mem = memcached_connection()
     mem.flush_all()
@@ -132,7 +150,7 @@ def time_test(n, ratio):
     time_miss(mem, n)
     time_half_miss(mem, n)
     time_ratio_miss(mem, ratio, n)
-
+    time_mem_incr(mem, n)
 
 
 

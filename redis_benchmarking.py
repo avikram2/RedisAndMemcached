@@ -226,6 +226,26 @@ def time_ratio_miss(r_conn, ratio, n):
     return average
 
 
+'''
+time_incr():
+test the time taken for an increment operation
+n = number of increment operations, total
+amt = amount to increment by
+'''
+
+def time_incr(r_conn, n, amt = 1):
+    sum = 0
+    for x in range(n):
+        start = time.process_time()
+        val = r_conn.incr(x, amt)
+        assert val is not None
+        end = time.process_time()
+        sum += (end-start)
+    average = sum/n
+    print("\nRedis: Total time for {} incr operations by {} amount is: {}".format(n, amt, sum))
+    print("Redis: Average time for 1 incr operation by {} amount is: {}".format(amt, average))
+    return average
+
 '''test_set_get_str
 test that the custom get string value is working and returns the value for a given key
 '''
@@ -261,7 +281,7 @@ def test_time(n, ratio):
     time_str_miss(r, n)
     time_half_miss(r, n)
     time_ratio_miss(r, ratio, n)
-
+    time_incr(r, n)
 
 
 
@@ -377,6 +397,37 @@ def time_list_numerical_sorting(n):
     r.sort('sort-list')
     end = time.process_time()
     sorting_time = end-start
-    print("The time taken to sort {} numbers (from 0 to {} inclusive) is: {}".format(n, n-1, sorting_time))
+    print("\nThe time taken to sort {} numbers (from 0 to {} inclusive) is: {}".format(n, n-1, sorting_time))
     return sorting_time
 
+
+#basic transactions with MULTI and EXEC
+
+'''
+In Redis, a basic transaction involving MULTI and EXEC is meant to provide the opportunity for one client to execute multiple commands A, B, C,
+without other clients being able to interrupt them. 
+This isn’t the same as a relational database transaction, which can be executed partially, and then rolled back or committed. 
+In Redis, every command passed as part of a basic MULTI/EXEC transaction is executed one after another until they’ve completed. 
+After they’ve completed, other clients may execute their commands.
+
+
+To perform a transaction, call MULTI, followed by a series of commands, and then EXEC to execute the commands end the transaction/critical section. 
+In python, this is handled with a pipeline() method, and the commands are also stored until execution
+'''
+
+# def pipeline_incr_decr():
+#     r = create_server()
+#     r.flushall()
+#     pipeline = r.pipeline()
+#     pipeline.incr('val')
+#     pipeline.incr('val', -1)
+
+# def naive_incr_decr():
+#     r = create_server()
+#     r.flushall()
+#     r.incr('naive_val')
+#     r.decr('naive_val')
+
+# def test_pipeline(n):
+#     for x in range(n):
+#         threading.

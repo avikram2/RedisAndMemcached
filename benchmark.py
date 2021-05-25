@@ -43,7 +43,7 @@ def API_test(n, path, params):
 
 
 
-API_test(100, config.coin_desk_path, config.coin_desk_params)
-
+#API_test(100, config.coin_desk_path, config.coin_desk_params)
+operations_test(10000, 1/2)
 
 
